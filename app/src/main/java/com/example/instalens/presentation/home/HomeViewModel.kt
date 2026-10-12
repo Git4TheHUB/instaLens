@@ -31,6 +31,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import android.graphics.Paint
 import android.util.DisplayMetrics
 import com.example.instalens.domain.manager.objectDetection.ObjectDetectionManager
@@ -49,6 +51,7 @@ class HomeViewModel @Inject constructor(
 
     private val _isImageSavedStateFlow = MutableStateFlow(true)
     val isImageSavedStateFlow = _isImageSavedStateFlow.asStateFlow()
+    private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     /**
      * Initializes and returns a `LifecycleCameraController` instance with the specified use cases.
@@ -68,10 +71,15 @@ class HomeViewModel @Inject constructor(
                         CameraController.IMAGE_CAPTURE
             )
             setImageAnalysisAnalyzer(
-                ContextCompat.getMainExecutor(context),
+                analysisExecutor,
                 cameraFrameAnalyzer
             )
         }
+    }
+
+    override fun onCleared() {
+        analysisExecutor.shutdown()
+        super.onCleared()
     }
 
     /**
