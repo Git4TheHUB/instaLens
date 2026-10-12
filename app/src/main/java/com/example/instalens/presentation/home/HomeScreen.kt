@@ -7,6 +7,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -86,8 +88,8 @@ fun HomeScreen() {
 
     val analyzer = remember {
         CameraFrameAnalyzer(
-            context = context,
-            objectDetectionManager = ObjectDetectionManagerImpl(context),
+            context = context.applicationContext,
+            objectDetectionManager = ObjectDetectionManagerImpl(context.applicationContext),
             onObjectDetectionResults = { results, frame ->
                 detections = results
                 latestFrame = frame
@@ -160,6 +162,10 @@ fun HomeScreen() {
                 ).roundToInt()
             )
         } ?: IntOffset.Zero
+        val animatedHudPosition by animateIntOffsetAsState(
+            targetValue = hudPosition,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        )
 
         CameraPreview(
             controller = cameraController,
@@ -183,12 +189,17 @@ fun HomeScreen() {
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             selectedRect?.let { rect ->
-                drawRect(
-                    color = HudText.copy(alpha = 0.9f),
-                    topLeft = androidx.compose.ui.geometry.Offset(rect.left, rect.top),
-                    size = androidx.compose.ui.geometry.Size(rect.width(), rect.height()),
-                    style = Stroke(width = 2.dp.toPx())
-                )
+                val color = HudText.copy(alpha = 0.92f)
+                val stroke = 2.dp.toPx()
+                val corner = minOf(rect.width(), rect.height(), 28.dp.toPx()) * 0.22f
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.left, rect.top), androidx.compose.ui.geometry.Offset(rect.left + corner, rect.top), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.left, rect.top), androidx.compose.ui.geometry.Offset(rect.left, rect.top + corner), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.right, rect.top), androidx.compose.ui.geometry.Offset(rect.right - corner, rect.top), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.right, rect.top), androidx.compose.ui.geometry.Offset(rect.right, rect.top + corner), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.left, rect.bottom), androidx.compose.ui.geometry.Offset(rect.left + corner, rect.bottom), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.left, rect.bottom), androidx.compose.ui.geometry.Offset(rect.left, rect.bottom - corner), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.right, rect.bottom), androidx.compose.ui.geometry.Offset(rect.right - corner, rect.bottom), stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(rect.right, rect.bottom), androidx.compose.ui.geometry.Offset(rect.right, rect.bottom - corner), stroke)
             }
         }
 
@@ -224,7 +235,7 @@ fun HomeScreen() {
 
         AnimatedVisibility(
             visible = selectedDetection != null,
-            modifier = Modifier.offset { hudPosition },
+            modifier = Modifier.offset { animatedHudPosition },
             enter = fadeIn() + scaleIn(initialScale = 0.92f),
             exit = fadeOut() + scaleOut(targetScale = 0.96f)
         ) {
